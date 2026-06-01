@@ -1,0 +1,22 @@
+# Secrets (NEVER commit)
+.env
+*.env.local
+cookies.txt
+*cookies*.txt
+
+# Build output (anchored to root so cmd/influencer-job/ is NOT ignored)
+/bin/
+/influencer-job
+/influencer-job-linux-amd64
+
+# Whisper models (large binaries)
+models/*.bin
+
+# Scratch / work artifacts
+/work/
+*.wav
+*.m4a
+*.webm
+
+# OS
+.DS_Store

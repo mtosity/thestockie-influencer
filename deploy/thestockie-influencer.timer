@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the thestockie influencer job daily
+
+[Timer]
+# Daily at 06:00 server time, with up to 15 min jitter.
+OnCalendar=*-*-* 06:00:00
+RandomizedDelaySec=900
+# If the box was off at the scheduled time, run at next boot.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

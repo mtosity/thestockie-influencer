@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Joseph Carlson",
+    "handle": "@JosephCarlsonShow",
+    "note": "Either set channelId directly (UC...), or leave it out and the job resolves it from handle/youtubeUrl on first run."
+  },
+  {
+    "name": "Everything Money",
+    "handle": "@EverythingMoney"
+  },
+  {
+    "name": "Parkev Tatevosian, CFA",
+    "handle": "@ParkevTatevosianCFA"
+  },
+  {
+    "name": "Learn to Invest - Investors Grow",
+    "handle": "@LearntoinvestStocks"
+  },
+  {
+    "name": "Example with explicit channelId",
+    "channelId": "UCBJycsmduvYEL83R_U4JriQ",
+    "youtubeUrl": "https://www.youtube.com/@mkbhd"
+  }
+]

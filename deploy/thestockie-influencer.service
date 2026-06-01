@@ -1,0 +1,30 @@
+[Unit]
+Description=thestockie influencer ingestion job
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=thestockie
+Group=thestockie
+WorkingDirectory=/opt/thestockie-influencer
+EnvironmentFile=/opt/thestockie-influencer/.env
+# yt-dlp needs ffmpeg + node + whisper-cli on PATH (systemd starts with a bare PATH).
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/thestockie-influencer/influencer-job --mode daily --env /opt/thestockie-influencer/.env
+
+# whisper.cpp is CPU-heavy; be a good neighbour on the box.
+Nice=10
+CPUWeight=60
+IOSchedulingClass=idle
+# A full run can transcribe several long videos on CPU — give it room.
+TimeoutStartSec=6h
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

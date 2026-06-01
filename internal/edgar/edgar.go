@@ -42,7 +42,17 @@ type Holding struct {
 	PutCall string // "Put" | "Call" | ""
 }
 
+// lastRequest tracks the last EDGAR request time for rate limiting.
+var lastRequest time.Time
+
 func (c *Client) get(ctx context.Context, url string) ([]byte, error) {
+	// SEC EDGAR rate limit: max 10 requests/second per API key
+	// We add a 200ms delay between requests (5 req/sec) to be safe
+	elapsed := time.Since(lastRequest)
+	if elapsed < 200*time.Millisecond {
+		time.Sleep(200*time.Millisecond - elapsed)
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -53,6 +63,8 @@ func (c *Client) get(ctx context.Context, url string) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	lastRequest = time.Now()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET %s: status %d", url, resp.StatusCode)
 	}

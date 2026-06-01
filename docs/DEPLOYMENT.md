@@ -16,19 +16,21 @@ works.
 The schema, ingest endpoints, and read queries live in the **thestockie** repo
 (`convex/`). From there:
 
+thestockie uses a **single Convex deployment — `exciting-bee-603`** — for both
+local/preview and production (there is no separate prod deployment). From the
+**thestockie** repo:
+
 ```bash
 # Pick a long random shared secret and register it on the deployment:
 npx convex env set INGEST_SECRET "$(openssl rand -hex 32)"
 
-# Push schema + functions + HTTP routes:
-npx convex dev --once     # → dev deployment (exciting-bee-603)
-npx convex deploy         # → production deployment, when going live
+# Push schema + functions + HTTP routes to exciting-bee-603:
+npx convex dev --once
 ```
 
 The job's `CONVEX_SITE_URL` is the deployment's **`.convex.site`** origin
-(e.g. `https://exciting-bee-603.convex.site`); its `INGEST_SECRET` must match the
-value set above. Dev and prod are separate deployments — set the secret and
-deploy functions on whichever the production site reads.
+(`https://exciting-bee-603.convex.site`); its `INGEST_SECRET` must match the value
+set above.
 
 ## 2. YouTube cookies (required)
 
@@ -152,9 +154,9 @@ The unit is `Type=oneshot`, runs as the `thestockie` user, sets a full `PATH`
 
 ## 9. Production checklist
 
-- [ ] `npx convex deploy` to the **prod** deployment
-- [ ] `INGEST_SECRET` set on prod; same value in the VPS `.env`
-- [ ] VPS `.env` `CONVEX_SITE_URL` → prod `.convex.site`
+- [ ] `npx convex dev --once` has pushed schema + functions to **exciting-bee-603**
+- [ ] `INGEST_SECRET` set on exciting-bee-603; same value in the VPS `.env`
+- [ ] VPS `.env` `CONVEX_SITE_URL=https://exciting-bee-603.convex.site`
 - [ ] `OLLAMA_API_KEY` valid; `OLLAMA_MODEL` reachable
 - [ ] `cookies.txt` present + fresh; `yt-dlp -U` recent
 - [ ] `whisper-cli` + model present; `WHISPER_MODEL` path correct
@@ -167,7 +169,7 @@ SEC EDGAR + OpenFIGI + Convex). It shares the same `/opt/thestockie-influencer`
 dir, `.env`, and Convex deployment as the influencer job.
 
 **Convex:** the 13F functions ship in the same `convex/` dir, so the section-1
-`npx convex deploy` already includes them — no extra step.
+`npx convex dev --once` already includes them — no extra step.
 
 **Build & ship** (`make build-linux` builds *both* binaries):
 

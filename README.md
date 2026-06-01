@@ -76,11 +76,12 @@ From the **thestockie** repo (the new files are already added):
 # Choose a long random shared secret and register it with Convex:
 npx convex env set INGEST_SECRET "$(openssl rand -hex 32)"
 
-# Push schema + functions + HTTP routes:
-npx convex deploy        # or: npx convex dev  (to develop against the dev deployment)
+# Push schema + functions + HTTP routes to the single deployment (exciting-bee-603):
+npx convex dev --once
 ```
 
-Your HTTP base URL is the deployment's **`.convex.site`** origin, e.g.
+thestockie uses **one Convex deployment, `exciting-bee-603`, for both local/preview
+and production**. Your HTTP base URL is its **`.convex.site`** origin:
 `https://exciting-bee-603.convex.site`. Put the same `INGEST_SECRET` in this job's `.env`.
 
 ## 2. Configure

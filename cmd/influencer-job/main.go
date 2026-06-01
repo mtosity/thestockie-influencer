@@ -82,7 +82,9 @@ func main() {
 		tr := &transcribe.Transcriber{
 			YtDlp: cfg.YtDlpBin, Ffmpeg: cfg.FfmpegBin, WhisperBin: cfg.WhisperBin,
 			CookiesFromBrowser: cfg.CookiesFromBrowser, CookiesFile: cfg.CookiesFile,
-			WhisperModel: cfg.WhisperModel, Threads: cfg.WhisperThreads, Lang: cfg.WhisperLang,
+			WhisperModel: cfg.WhisperModel, WhisperModelMedium: cfg.WhisperModelMedium,
+			LongVideoThreshold: cfg.LongVideoThreshold, ChunkDuration: cfg.ChunkDuration,
+			Threads: cfg.WhisperThreads, Lang: cfg.WhisperLang,
 			WorkDir: cfg.WorkDir, KeepAudio: cfg.KeepAudio, Log: log,
 		}
 		p := pipeline.New(cfg, nil, tr, llm.New(ollama, 0, log), &http.Client{Timeout: 30 * time.Second}, log)
@@ -129,6 +131,9 @@ func main() {
 		CookiesFile:        cfg.CookiesFile,
 		WhisperBin:         cfg.WhisperBin,
 		WhisperModel:       cfg.WhisperModel,
+		WhisperModelMedium: cfg.WhisperModelMedium,
+		LongVideoThreshold: cfg.LongVideoThreshold,
+		ChunkDuration:      cfg.ChunkDuration,
 		Threads:            cfg.WhisperThreads,
 		Lang:               cfg.WhisperLang,
 		WorkDir:            cfg.WorkDir,

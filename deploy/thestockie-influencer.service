@@ -5,13 +5,15 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=thestockie
-Group=thestockie
+User=ubuntu
+Group=ubuntu
 WorkingDirectory=/opt/thestockie-influencer
 EnvironmentFile=/opt/thestockie-influencer/.env
 # yt-dlp needs ffmpeg + node + whisper-cli on PATH (systemd starts with a bare PATH).
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# whisper.cpp needs LD_LIBRARY_PATH for BLAS libraries.
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 ExecStart=/opt/thestockie-influencer/influencer-job --mode daily --env /opt/thestockie-influencer/.env
+ExecStopPost=/opt/thestockie-influencer/notify.sh
 
 # whisper.cpp is CPU-heavy; be a good neighbour on the box.
 Nice=10
@@ -20,10 +22,8 @@ IOSchedulingClass=idle
 # A full run can transcribe several long videos on CPU — give it room.
 TimeoutStartSec=6h
 
-# Hardening
-NoNewPrivileges=true
-ProtectSystem=full
-ProtectHome=true
+# Hardening: relax for yt-dlp/whisper which need library access
+NoNewPrivileges=false
 PrivateTmp=true
 
 [Install]

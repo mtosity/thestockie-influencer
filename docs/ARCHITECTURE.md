@@ -142,3 +142,35 @@ Convex functions (`thestockie/convex/`):
 | Schema in the **thestockie** repo | Convex is the app's backend; one deployment, visible to the dashboard |
 | Embed JSON shape in the prompt (no `format`) | reasoning models route answers to a `thinking` field and return empty `content` when `format`-constrained |
 | 60-day **retention/window** | dashboard reflects current views, not stale calls |
+
+## 8. Second pipeline — Super Investors (13F)
+
+A separate, lighter job (`cmd/superinvestor-job`) tracks ~10 legendary fund
+managers via their quarterly **SEC 13F-HR** filings. No Whisper/LLM — pure
+HTTP + parsing:
+
+```
+SEC EDGAR submissions + info-table XML ─► internal/edgar  (fetch + parse holdings)
+                                          internal/sec13f  (QoQ diff → moves)
+OpenFIGI (CUSIP→ticker, cached) ────────► internal/figi
+                                              │ HTTP (same INGEST_SECRET)
+                                              ▼
+   Convex: superInvestors · investor13fFilings · investorPositions ·
+           investorConsensus · cusipTickers
+                                              │ tRPC reads
+                                              ▼
+        Next.js: "Super Investors" section on /influencers + /investors/[slug]
+```
+
+- For each investor: fetch the latest two `13F-HR` filings, aggregate holdings by
+  CUSIP, **diff quarter-over-quarter** into `new|added|reduced|sold|hold`,
+  resolve tickers (OpenFIGI, cached in `cusipTickers`), store + aggregate
+  cross-investor `investorConsensus` (distinct-investor buy/sell counts, reusing
+  the influencer consensus rules).
+- **Idempotent + cheap to re-scan:** skips investors whose latest EDGAR filing is
+  already stored, so a 12h `superinvestor.timer` catches rolling new filings.
+- Convex schema/functions live in the **thestockie** repo
+  (`superInvestor.ts`, `superInvestorReads.ts`, `http.ts`).
+
+Caveat: 13F is **long-only** and lags ~45 days; "sold" means trimmed/exited, not
+short. Deployment: see [DEPLOYMENT.md](./DEPLOYMENT.md) §10.

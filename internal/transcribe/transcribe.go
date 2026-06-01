@@ -55,6 +55,8 @@ func (t *Transcriber) Transcribe(ctx context.Context, videoID, videoURL string) 
 		"-x", "--audio-format", "wav",
 		"--postprocessor-args", "ffmpeg:-ar 16000 -ac 1 -acodec pcm_s16le",
 		"--no-playlist", "--no-progress", "--quiet", "--no-warnings",
+		"--remote-components", "ejs:github",
+		"--js-runtimes", "node",
 		"-o", outTemplate,
 	}
 	if t.Ffmpeg != "" {
@@ -127,6 +129,7 @@ func (t *Transcriber) Transcribe(ctx context.Context, videoID, videoURL string) 
 // on failure).
 func run(ctx context.Context, bin string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH=/usr/local/lib")
 	out, err := cmd.CombinedOutput()
 	s := strings.TrimSpace(string(out))
 	if len(s) > 2000 {

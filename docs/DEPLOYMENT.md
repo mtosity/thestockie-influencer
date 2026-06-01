@@ -16,19 +16,21 @@ works.
 The schema, ingest endpoints, and read queries live in the **thestockie** repo
 (`convex/`). From there:
 
+thestockie uses a **single Convex deployment — `exciting-bee-603`** — for both
+local/preview and production (there is no separate prod deployment). From the
+**thestockie** repo:
+
 ```bash
 # Pick a long random shared secret and register it on the deployment:
 npx convex env set INGEST_SECRET "$(openssl rand -hex 32)"
 
-# Push schema + functions + HTTP routes:
-npx convex dev --once     # → dev deployment (exciting-bee-603)
-npx convex deploy         # → production deployment, when going live
+# Push schema + functions + HTTP routes to exciting-bee-603:
+npx convex dev --once
 ```
 
 The job's `CONVEX_SITE_URL` is the deployment's **`.convex.site`** origin
-(e.g. `https://exciting-bee-603.convex.site`); its `INGEST_SECRET` must match the
-value set above. Dev and prod are separate deployments — set the secret and
-deploy functions on whichever the production site reads.
+(`https://exciting-bee-603.convex.site`); its `INGEST_SECRET` must match the value
+set above.
 
 ## 2. YouTube cookies (required)
 
@@ -152,10 +154,70 @@ The unit is `Type=oneshot`, runs as the `thestockie` user, sets a full `PATH`
 
 ## 9. Production checklist
 
-- [ ] `npx convex deploy` to the **prod** deployment
-- [ ] `INGEST_SECRET` set on prod; same value in the VPS `.env`
-- [ ] VPS `.env` `CONVEX_SITE_URL` → prod `.convex.site`
+- [ ] `npx convex dev --once` has pushed schema + functions to **exciting-bee-603**
+- [ ] `INGEST_SECRET` set on exciting-bee-603; same value in the VPS `.env`
+- [ ] VPS `.env` `CONVEX_SITE_URL=https://exciting-bee-603.convex.site`
 - [ ] `OLLAMA_API_KEY` valid; `OLLAMA_MODEL` reachable
 - [ ] `cookies.txt` present + fresh; `yt-dlp -U` recent
 - [ ] `whisper-cli` + model present; `WHISPER_MODEL` path correct
 - [ ] timer enabled; one manual run green (`jobRuns` row `success`)
+
+## 10. Super Investors (13F) job — `superinvestor-job`
+
+A **second**, much lighter job (no Whisper/ffmpeg/yt-dlp/cookies — just HTTP to
+SEC EDGAR + OpenFIGI + Convex). It shares the same `/opt/thestockie-influencer`
+dir, `.env`, and Convex deployment as the influencer job.
+
+**Convex:** the 13F functions ship in the same `convex/` dir, so the section-1
+`npx convex dev --once` already includes them — no extra step.
+
+**Build & ship** (`make build-linux` builds *both* binaries):
+
+```bash
+make build-linux
+scp bin/superinvestor-job-linux-amd64 root@<host>:/opt/thestockie-influencer/superinvestor-job
+scp config/superinvestors.json        root@<host>:/opt/thestockie-influencer/config/superinvestors.json
+chmod +x /opt/thestockie-influencer/superinvestor-job
+chown thestockie:thestockie /opt/thestockie-influencer/superinvestor-job
+```
+
+**Env** (in the same `.env`; `CONVEX_SITE_URL` + `INGEST_SECRET` are already there):
+
+```ini
+SUPERINVESTORS_FILE=config/superinvestors.json
+EDGAR_USER_AGENT=thestockie you@yourdomain.com   # SEC requires a real contact
+# OPENFIGI_API_KEY=...                            # optional, faster CUSIP→ticker
+```
+
+**Schedule (every 12h)** — the job is idempotent and **skips any investor whose
+latest EDGAR filing is already stored**, so the 12h cadence cheaply catches new
+rolling filings:
+
+```bash
+cp deploy/superinvestor.{service,timer} /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now superinvestor.timer       # 11 PM & 11 AM ET (12h; ~1h after evening filings)
+```
+
+**Manual run / debug:**
+
+```bash
+systemctl start superinvestor.service            # full scan now
+journalctl -u superinvestor.service -f
+# or, locally, probe one investor without writing:
+./superinvestor-job --investor 1067983 --dry-run
+./superinvestor-job --force                      # reprocess all even if unchanged
+```
+
+**Checklist:** `superinvestor-job` shipped + `+x`; `config/superinvestors.json`
+present; `EDGAR_USER_AGENT` set to a real contact; `superinvestor.timer` enabled;
+one manual run populates `investorConsensus` for the latest period.
+
+### Troubleshooting (13F)
+
+| Symptom | Cause / fix |
+|---|---|
+| EDGAR `403` | missing/blocked `EDGAR_USER_AGENT` — set a descriptive UA with a real email |
+| tickers missing (`—`) | OpenFIGI couldn't map the CUSIP (often foreign issuers) — set `OPENFIGI_API_KEY` for reliability; values still aggregate by CUSIP |
+| nothing updates | every investor already up to date — use `--force` to reprocess |
+| `401` on `/investor/*` | `.env` `INGEST_SECRET` ≠ the Convex deployment's — re-sync them |

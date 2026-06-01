@@ -196,7 +196,7 @@ rolling filings:
 ```bash
 cp deploy/superinvestor.{service,timer} /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now superinvestor.timer       # runs 04:00 & 16:00
+systemctl enable --now superinvestor.timer       # 11 PM & 11 AM ET (12h; ~1h after evening filings)
 ```
 
 **Manual run / debug:**

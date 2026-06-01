@@ -2,11 +2,15 @@
 Description=Scan SEC 13F filings for the tracked super investors every 12h
 
 [Timer]
-# Twice a day (04:00 and 16:00) — new 13F filings appear on rolling dates ~45d
-# after quarter-end, so a 12h scan catches them well within a day. The job
-# skips any investor whose latest EDGAR filing is already stored.
-OnCalendar=*-*-* 04,16:00:00
-RandomizedDelaySec=1800
+# 13F filings hit EDGAR in the evening ET (acceptance clusters ~8–9 PM ET, and
+# EDGAR's filing window closes at 10 PM ET — so the day's filings are all public
+# by then). Scan at 11 PM ET (≈1h after the evening cluster + just after close)
+# and again 12h later at 11 AM ET. Times are pinned to America/New_York so they
+# stay correct across DST regardless of the server's timezone. The job skips any
+# investor whose latest EDGAR filing is already stored.
+OnCalendar=*-*-* 23:00:00 America/New_York
+OnCalendar=*-*-* 11:00:00 America/New_York
+RandomizedDelaySec=900
 Persistent=true
 
 [Install]

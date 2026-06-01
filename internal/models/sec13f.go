@@ -22,5 +22,5 @@ type Position struct {
 	ChangeType   string   `json:"changeType"` // new | added | reduced | sold | hold
 	ChangePct    *float64 `json:"changePct,omitempty"`
 	PrevShares   *float64 `json:"prevShares,omitempty"`
-	IsOption     bool     `json:"isOption,omitempty"`
+	IsOption     bool     `json:"isOption"`
 }

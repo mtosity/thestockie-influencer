@@ -1,6 +1,7 @@
 // Package transcribe turns a YouTube video into text: yt-dlp pulls the audio,
 // ffmpeg (via yt-dlp) downsamples to 16 kHz mono, and whisper.cpp transcribes.
-// For long videos, audio is split into chunks to avoid OOM.
+// For long videos, audio is physically split into chunks with ffmpeg to avoid
+// whisper.cpp loading the entire file into RAM.
 package transcribe
 
 import (
@@ -145,37 +146,59 @@ func (t *Transcriber) transcribeSingle(ctx context.Context, videoID, wav, model,
 	return parseWhisperJSON(outBase + ".json")
 }
 
-// transcribeChunks splits long audio into N-minute chunks, transcribes each,
-// and concatenates the results.
+// transcribeChunks PHYSICALLY splits audio into separate files using ffmpeg,
+// then transcribes each chunk independently. This avoids whisper.cpp loading
+// the entire WAV into RAM (which causes OOM on long videos).
 func (t *Transcriber) transcribeChunks(ctx context.Context, videoID, wav, model string, dur, chunkSize int) (string, error) {
 	chunkCount := (dur + chunkSize - 1) / chunkSize
 	t.Log.Info("chunking long video", "videoId", videoID,
 		"chunks", chunkCount, "chunkDuration", fmt.Sprintf("%dm", chunkSize/60))
 
 	var parts []string
+	ffmpegBin := "ffmpeg"
+	if t.Ffmpeg != "" {
+		ffmpegBin = t.Ffmpeg
+	}
+
 	for i := 0; i < chunkCount; i++ {
-		offset := i * chunkSize * 1000 // milliseconds
-		length := chunkSize * 1000
+		offset := i * chunkSize
+		length := chunkSize
 		if i == chunkCount-1 {
-			length = (dur - i*chunkSize) * 1000
+			length = dur - i*chunkSize
 		}
-		chunkBase := filepath.Join(t.WorkDir, fmt.Sprintf("%s_chunk%d", videoID, i))
-		chunkJSON := chunkBase + ".json"
+
+		chunkWav := filepath.Join(t.WorkDir, fmt.Sprintf("%s_chunk%d.wav", videoID, i))
+		chunkJSON := filepath.Join(t.WorkDir, fmt.Sprintf("%s_chunk%d.json", videoID, i))
 		if !t.KeepAudio {
+			defer os.Remove(chunkWav)
 			defer os.Remove(chunkJSON)
 		}
 
+		// Split audio with ffmpeg: extract offset..offset+length seconds
+		_, err := run(ctx, ffmpegBin,
+			"-y", "-i", wav,
+			"-ss", strconv.Itoa(offset),
+			"-t", strconv.Itoa(length),
+			"-ar", "16000", "-ac", "1",
+			"-acodec", "pcm_s16le",
+			chunkWav,
+		)
+		if err != nil {
+			return "", fmt.Errorf("ffmpeg chunk %d: %w", i, err)
+		}
+
+		// Transcribe chunk
+		chunkBase := filepath.Join(t.WorkDir, fmt.Sprintf("%s_chunk%d", videoID, i))
 		wArgs := []string{
 			"-m", model,
-			"-f", wav,
+			"-f", chunkWav,
 			"-l", t.Lang,
 			"-t", strconv.Itoa(t.Threads),
-			"-ot", strconv.Itoa(offset),
-			"-d", strconv.Itoa(length),
 			"-oj", "-of", chunkBase,
 			"-np",
 		}
-		t.Log.Debug("transcribing chunk", "videoId", videoID, "chunk", i+1, "offset", fmt.Sprintf("%dm", offset/60000))
+		t.Log.Debug("transcribing chunk", "videoId", videoID, "chunk", i+1,
+			"offset", fmt.Sprintf("%dm", offset/60))
 		if out, err := run(ctx, t.WhisperBin, wArgs...); err != nil {
 			return "", fmt.Errorf("whisper chunk %d: %w: %s", i, err, out)
 		}

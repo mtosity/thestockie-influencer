@@ -1,0 +1,26 @@
+[Unit]
+Description=thestockie super-investor 13F scan
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=thestockie
+Group=thestockie
+WorkingDirectory=/opt/thestockie-influencer
+EnvironmentFile=/opt/thestockie-influencer/.env
+# Network only; no special PATH needed (pure HTTP), but keep it explicit.
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/thestockie-influencer/superinvestor-job
+
+Nice=10
+TimeoutStartSec=30m
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

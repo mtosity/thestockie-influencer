@@ -45,6 +45,11 @@ type Config struct {
 	KeepAudio           bool
 
 	InfluencersFile string
+
+	// Super investors (13F)
+	SuperInvestorsFile string
+	EdgarUserAgent     string // SEC requires a descriptive UA with contact info
+	OpenFIGIKey        string // optional; higher CUSIP→ticker rate limits
 }
 
 func getenv(key, def string) string {
@@ -141,6 +146,10 @@ func Load() *Config {
 		KeepAudio:           getenvBool("KEEP_AUDIO", false),
 
 		InfluencersFile: getenv("INFLUENCERS_FILE", "config/influencers.json"),
+
+		SuperInvestorsFile: getenv("SUPERINVESTORS_FILE", "config/superinvestors.json"),
+		EdgarUserAgent:     getenv("EDGAR_USER_AGENT", "thestockie-influencer contact@thestockie.com"),
+		OpenFIGIKey:        getenv("OPENFIGI_API_KEY", ""),
 	}
 }
 

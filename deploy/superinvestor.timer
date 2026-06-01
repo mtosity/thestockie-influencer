@@ -1,0 +1,13 @@
+[Unit]
+Description=Scan SEC 13F filings for the tracked super investors every 12h
+
+[Timer]
+# Twice a day (04:00 and 16:00) — new 13F filings appear on rolling dates ~45d
+# after quarter-end, so a 12h scan catches them well within a day. The job
+# skips any investor whose latest EDGAR filing is already stored.
+OnCalendar=*-*-* 04,16:00:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

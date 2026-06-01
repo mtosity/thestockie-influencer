@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Warren Buffett",
+    "firm": "Berkshire Hathaway",
+    "style": "Quality Value / Moat Investing",
+    "why": "The ultimate baseline for blue-chip compounding, cash generation, and financial giants.",
+    "cik": "1067983",
+    "slug": "warren-buffett"
+  },
+  {
+    "name": "David Tepper",
+    "firm": "Appaloosa Management",
+    "style": "Opportunistic Macro & Distressed",
+    "why": "Highly agile trader known for massive macroeconomic pivots and aggressive tech/semiconductor bets.",
+    "cik": "1656456",
+    "slug": "david-tepper"
+  },
+  {
+    "name": "Bill Ackman",
+    "firm": "Pershing Square",
+    "style": "Ultra-Concentrated Activism",
+    "why": "Typically holds fewer than 10 large-cap names; excellent for analyzing deep corporate operational plays.",
+    "cik": "1336528",
+    "slug": "bill-ackman"
+  },
+  {
+    "name": "Seth Klarman",
+    "firm": "The Baupost Group",
+    "style": "Deep Value / Margin of Safety",
+    "why": "The \"Oracle of Boston\" looks for complex, unloved, or mispriced assets with strict downside protection.",
+    "cik": "1061768",
+    "slug": "seth-klarman"
+  },
+  {
+    "name": "Stanley Druckenmiller",
+    "firm": "Duquesne Family Office",
+    "style": "Top-Down Global Macro",
+    "why": "Renowned for an unblemished multi-decade track record, blending macro trends with high-conviction equity themes.",
+    "cik": "1536411",
+    "slug": "stanley-druckenmiller"
+  },
+  {
+    "name": "Howard Marks",
+    "firm": "Oaktree Capital",
+    "style": "Distressed Debt & Risk Control",
+    "why": "Master of market cycles; tracking his equity moves reveals where he sees deep value amidst market credit stress.",
+    "cik": "949509",
+    "slug": "howard-marks"
+  },
+  {
+    "name": "Chase Coleman",
+    "firm": "Tiger Global Management",
+    "style": "High-Growth Tech & Secular Trends",
+    "why": "The premier \"Tiger Cub\" tracking early-to-late stage software, internet, and disruptive global consumer tech.",
+    "cik": "1167483",
+    "slug": "chase-coleman"
+  },
+  {
+    "name": "Daniel Loeb",
+    "firm": "Third Point",
+    "style": "Event-Driven / Activist",
+    "why": "Looks for catalysts like spin-offs, corporate restructurings, or management shakeups to unlock value.",
+    "cik": "1040273",
+    "slug": "daniel-loeb"
+  },
+  {
+    "name": "Paul Singer",
+    "firm": "Elliott Investment Management",
+    "style": "Multi-Strategy Activism",
+    "why": "A powerhouse activist that forces corporate governance overhauls; tracking hints at impending corporate shakeups.",
+    "cik": "1791786",
+    "slug": "paul-singer"
+  },
+  {
+    "name": "Li Lu",
+    "firm": "Himalaya Capital",
+    "style": "Modern Value / Global Growth",
+    "why": "Heavily influenced by Charlie Munger; runs a highly concentrated book focused on pristine, long-term compounders.",
+    "cik": "1709323",
+    "slug": "li-lu"
+  }
+]

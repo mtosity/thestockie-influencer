@@ -25,12 +25,15 @@ type Config struct {
 	OllamaModel  string
 
 	// Transcription toolchain
-	WhisperBin     string
-	WhisperModel   string // path to ggml-large-v3-turbo.bin
-	WhisperThreads int
-	WhisperLang    string // "auto" or ISO code
-	YtDlpBin       string
-	FfmpegBin      string // optional; passed to yt-dlp --ffmpeg-location if set
+	WhisperBin           string
+	WhisperModel         string // path to ggml-large-v3-turbo.bin
+	WhisperModelMedium   string // path to medium model for long videos
+	LongVideoThreshold   int    // seconds; switch to medium model above this
+	ChunkDuration        int    // seconds per chunk for very long videos; default 600
+	WhisperThreads       int
+	WhisperLang          string // "auto" or ISO code
+	YtDlpBin             string
+	FfmpegBin            string // optional; passed to yt-dlp --ffmpeg-location if set
 
 	// YouTube auth to beat "confirm you're not a bot" (one or the other):
 	CookiesFromBrowser string // e.g. "chrome", "safari", "firefox"
@@ -123,10 +126,13 @@ func Load() *Config {
 		OllamaAPIKey: getenv("OLLAMA_API_KEY", ""),
 		OllamaModel:  getenv("OLLAMA_MODEL", "gpt-oss:120b"),
 
-		WhisperBin:     getenv("WHISPER_BIN", "whisper-cli"),
-		WhisperModel:   getenv("WHISPER_MODEL", "models/ggml-large-v3-turbo.bin"),
-		WhisperThreads: getenvInt("WHISPER_THREADS", 8),
-		WhisperLang:    getenv("WHISPER_LANG", "auto"),
+		WhisperBin:         getenv("WHISPER_BIN", "whisper-cli"),
+		WhisperModel:       getenv("WHISPER_MODEL", "models/ggml-large-v3-turbo.bin"),
+		WhisperModelMedium: getenv("WHISPER_MODEL_MEDIUM", ""),
+		LongVideoThreshold: getenvInt("LONG_VIDEO_THRESHOLD", 900), // 15 minutes
+		ChunkDuration:      getenvInt("CHUNK_DURATION", 600),         // 10 minutes
+		WhisperThreads:     getenvInt("WHISPER_THREADS", 8),
+		WhisperLang:        getenv("WHISPER_LANG", "auto"),
 		YtDlpBin:       getenv("YTDLP_BIN", "yt-dlp"),
 		FfmpegBin:      getenv("FFMPEG_BIN", ""),
 
@@ -163,6 +169,11 @@ func (c *Config) Validate(needLLM, needTranscribe bool) error {
 	if needTranscribe {
 		if _, err := os.Stat(c.WhisperModel); err != nil {
 			return fmt.Errorf("whisper model not found at %q (set WHISPER_MODEL): %w", c.WhisperModel, err)
+		}
+		if c.WhisperModelMedium != "" {
+			if _, err := os.Stat(c.WhisperModelMedium); err != nil {
+				return fmt.Errorf("medium whisper model not found at %q (set WHISPER_MODEL_MEDIUM): %w", c.WhisperModelMedium, err)
+			}
 		}
 	}
 	return nil

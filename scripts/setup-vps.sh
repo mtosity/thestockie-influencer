@@ -18,7 +18,9 @@ echo "==> Installing system packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 # python3 + nodejs are needed by yt-dlp (nodejs solves YouTube's JS "n" challenge).
-apt-get install -y ffmpeg git build-essential cmake curl ca-certificates python3 nodejs
+# pkg-config + libopenblas-dev are needed for whisper.cpp BLAS acceleration.
+apt-get install -y ffmpeg git build-essential cmake curl ca-certificates \
+  python3 nodejs pkg-config libopenblas-dev libopenblas-base
 
 echo "==> Installing yt-dlp (latest)"
 curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
@@ -33,9 +35,15 @@ if [ ! -d "$WHISPER_SRC/.git" ]; then
 fi
 cd "$WHISPER_SRC"
 git pull --ff-only || true
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DGGML_BLAS=ON \
+  -DGGML_BLAS_VENDOR=OpenBLAS \
+  -DGGML_OPENMP=ON
 cmake --build build -j "$BUILD_THREADS" --config Release
+cmake --install build || true
 install -m 0755 build/bin/whisper-cli /usr/local/bin/whisper-cli
+ldconfig
 echo "    whisper-cli -> $(command -v whisper-cli)"
 
 echo "==> Downloading whisper model: $WHISPER_MODEL"

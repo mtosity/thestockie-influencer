@@ -135,7 +135,7 @@ func Load() *Config {
 		WhisperModel:       getenv("WHISPER_MODEL", "models/ggml-large-v3-turbo.bin"),
 		WhisperModelMedium: getenv("WHISPER_MODEL_MEDIUM", ""),
 		LongVideoThreshold: getenvInt("LONG_VIDEO_THRESHOLD", 900), // 15 minutes
-		ChunkDuration:      getenvInt("CHUNK_DURATION", 600),         // 10 minutes
+		ChunkDuration:      getenvInt("CHUNK_DURATION", 300),         // 5 minutes
 		WhisperThreads:     getenvInt("WHISPER_THREADS", 8),
 		WhisperLang:        getenv("WHISPER_LANG", "auto"),
 		YtDlpBin:       getenv("YTDLP_BIN", "yt-dlp"),

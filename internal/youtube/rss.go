@@ -3,13 +3,16 @@
 package youtube
 
 import (
+	"bufio"
 	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +23,48 @@ const (
 	feedURL   = "https://www.youtube.com/feeds/videos.xml?channel_id="
 	userAgent = "thestockie-influencer/1.0 (+https://thestockie.com)"
 )
+
+// CookieFile is the path to a Netscape-format cookies.txt exported from a
+// browser.  When non-empty, DiscoverVideos and ResolveChannelID read it and
+// send matching cookies on requests so that YouTube does not return 404 for
+// RSS feeds on IPs that are otherwise challenged.
+var CookieFile string
+
+// youtubeCookies reads a Netscape cookies.txt and returns a single Cookie
+// header string with all non-expired .youtube.com entries.
+func youtubeCookies(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	now := time.Now()
+	var parts []string
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Split(line, "\t")
+		if len(fields) < 7 {
+			continue
+		}
+		domain := fields[0]
+		if !strings.HasSuffix(domain, ".youtube.com") {
+			continue
+		}
+		expSec, err := strconv.ParseInt(fields[4], 10, 64)
+		if err == nil && expSec > 0 && now.After(time.Unix(expSec, 0)) {
+			continue // expired
+		}
+		name := fields[5]
+		value := fields[6]
+		parts = append(parts, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(parts, "; ")
+}
 
 // atomFeed mirrors the subset of the YouTube Atom feed we need. encoding/xml
 // matches by local element name, so namespace prefixes (yt:, media:) are fine.
@@ -41,6 +86,11 @@ func DiscoverVideos(ctx context.Context, hc *http.Client, channelID string) ([]m
 		return nil, err
 	}
 	req.Header.Set("User-Agent", userAgent)
+	if CookieFile != "" {
+		if c := youtubeCookies(CookieFile); c != "" {
+			req.Header.Set("Cookie", c)
+		}
+	}
 
 	resp, err := hc.Do(req)
 	if err != nil {
@@ -96,6 +146,11 @@ func ResolveChannelID(ctx context.Context, hc *http.Client, handleOrURL string) 
 	}
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	if CookieFile != "" {
+		if c := youtubeCookies(CookieFile); c != "" {
+			req.Header.Set("Cookie", c)
+		}
+	}
 
 	resp, err := hc.Do(req)
 	if err != nil {

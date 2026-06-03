@@ -21,7 +21,7 @@ import (
 	"github.com/mtosity/thestockie-influencer/internal/youtube"
 )
 
-const perVideoTimeout = 40 * time.Minute
+const perVideoTimeout = 240 * time.Minute
 
 type Options struct {
 	Mode           string // daily | manual | aggregate

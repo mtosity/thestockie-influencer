@@ -23,6 +23,7 @@ import (
 	"github.com/mtosity/thestockie-influencer/internal/llm"
 	"github.com/mtosity/thestockie-influencer/internal/pipeline"
 	"github.com/mtosity/thestockie-influencer/internal/transcribe"
+	"github.com/mtosity/thestockie-influencer/internal/youtube"
 )
 
 func main() {
@@ -78,6 +79,7 @@ func main() {
 		}
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
+		youtube.CookieFile = cfg.CookiesFile
 		ollama := &llm.Ollama{Host: cfg.OllamaHost, APIKey: cfg.OllamaAPIKey, Model: cfg.OllamaModel, HTTP: &http.Client{Timeout: 8 * time.Minute}}
 		tr := &transcribe.Transcriber{
 			YtDlp: cfg.YtDlpBin, Ffmpeg: cfg.FfmpegBin, WhisperBin: cfg.WhisperBin,
@@ -115,6 +117,9 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// Pass cookie file path to the youtube package so RSS feeds work too.
+	youtube.CookieFile = cfg.CookiesFile
 
 	cx := convex.New(cfg.ConvexSiteURL, cfg.IngestSecret, &http.Client{Timeout: 90 * time.Second})
 	ollama := &llm.Ollama{

@@ -209,6 +209,12 @@ func discoverYtDlp(ctx context.Context, channelID string) ([]models.VideoCandida
 				}
 			}
 		}
+		// yt-dlp sometimes returns "NA" for upload_date on shorts or when
+		// metadata is unavailable.  Default to now so the video isn't silently
+		// dropped by the age filter — we just discovered it, so it's new.
+		if publishedMs == 0 {
+			publishedMs = time.Now().UnixMilli()
+		}
 		candidates = append(candidates, models.VideoCandidate{
 			VideoID:     videoID,
 			ChannelID:   channelID,

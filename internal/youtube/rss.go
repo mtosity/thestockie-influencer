@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,6 +30,11 @@ const (
 // send matching cookies on requests so that YouTube does not return 404 for
 // RSS feeds on IPs that are otherwise challenged.
 var CookieFile string
+
+// YtDlpBin is the path to the yt-dlp binary.  When set, DiscoverVideos will
+// fall back to yt-dlp's flat-playlist extraction if the RSS feed returns 404
+// or 500 (common when YouTube challenges the IP).
+var YtDlpBin string
 
 // youtubeCookies reads a Netscape cookies.txt and returns a single Cookie
 // header string with all non-expired .youtube.com entries.
@@ -77,10 +83,35 @@ type atomFeed struct {
 }
 
 // DiscoverVideos returns the recent uploads for a channel, newest first.
+// It first tries the public RSS feed (fast, no subprocess).  If that fails
+// with a 404/500 — which YouTube returns when the IP is challenged — and
+// YtDlpBin is set, it falls back to yt-dlp's flat-playlist extraction.
 func DiscoverVideos(ctx context.Context, hc *http.Client, channelID string) ([]models.VideoCandidate, error) {
 	if !strings.HasPrefix(channelID, "UC") {
 		return nil, fmt.Errorf("invalid channelId %q (expected UC...)", channelID)
 	}
+
+	// 1) Try RSS feed first.
+	candidates, rssErr := discoverRSS(ctx, hc, channelID)
+	if rssErr == nil {
+		return candidates, nil
+	}
+
+	// 2) RSS failed.  If yt-dlp is available, fall back.
+	if YtDlpBin != "" {
+		candidates, ytdlpErr := discoverYtDlp(ctx, channelID)
+		if ytdlpErr == nil {
+			return candidates, nil
+		}
+		// Return the yt-dlp error as the primary error (more actionable).
+		return nil, fmt.Errorf("rss: %w; yt-dlp: %w", rssErr, ytdlpErr)
+	}
+
+	return nil, rssErr
+}
+
+// discoverRSS fetches the Atom feed for a channel.
+func discoverRSS(ctx context.Context, hc *http.Client, channelID string) ([]models.VideoCandidate, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, feedURL+channelID, nil)
 	if err != nil {
 		return nil, err
@@ -128,6 +159,66 @@ func DiscoverVideos(ctx context.Context, hc *http.Client, channelID string) ([]m
 		})
 	}
 	return out, nil
+}
+
+// discoverYtDlp uses yt-dlp's flat playlist extraction to list recent videos
+// for a channel.  This works even when the RSS feed is IP-blocked, provided
+// yt-dlp has valid cookies and a JS runtime for challenge solving.
+func discoverYtDlp(ctx context.Context, channelID string) ([]models.VideoCandidate, error) {
+	playlistURL := fmt.Sprintf("https://www.youtube.com/channel/%s/videos", channelID)
+
+	args := []string{
+		"--flat-playlist",
+		"--playlist-end", "15",
+		"--print", "%(id)s\t%(title)s\t%(upload_date)s",
+		"--no-progress", "--quiet",
+		"--no-warnings",
+		"--remote-components", "ejs:github",
+		"--js-runtimes", "node",
+	}
+	if CookieFile != "" {
+		args = append(args, "--cookies", CookieFile)
+	}
+	args = append(args, playlistURL)
+
+	cmd := exec.CommandContext(ctx, YtDlpBin, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("yt-dlp: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+
+	var candidates []models.VideoCandidate
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "\t")
+		if len(parts) < 2 {
+			continue
+		}
+		videoID := strings.TrimSpace(parts[0])
+		title := strings.TrimSpace(parts[1])
+		var publishedMs int64
+		if len(parts) >= 3 {
+			dateStr := strings.TrimSpace(parts[2])
+			if len(dateStr) == 8 { // YYYYMMDD
+				if t, err := time.Parse("20060102", dateStr); err == nil {
+					publishedMs = t.UnixMilli()
+				}
+			}
+		}
+		candidates = append(candidates, models.VideoCandidate{
+			VideoID:     videoID,
+			ChannelID:   channelID,
+			Title:       title,
+			URL:         "https://www.youtube.com/watch?v=" + videoID,
+			PublishedAt: publishedMs,
+		})
+	}
+
+	return candidates, nil
 }
 
 var (

@@ -120,6 +120,7 @@ func main() {
 
 	// Pass cookie file path to the youtube package so RSS feeds work too.
 	youtube.CookieFile = cfg.CookiesFile
+	youtube.YtDlpBin = cfg.YtDlpBin
 
 	cx := convex.New(cfg.ConvexSiteURL, cfg.IngestSecret, &http.Client{Timeout: 90 * time.Second})
 	ollama := &llm.Ollama{

@@ -64,6 +64,7 @@ endpoints this job calls).
 - `yt-dlp` and `ffmpeg` on PATH
 - `whisper-cli` (whisper.cpp) + a `ggml-large-v3-turbo.bin` model
   - macOS dev: `brew install whisper-cpp ffmpeg yt-dlp`
+- **Deno** — YouTube now requires a JS runtime for yt-dlp extraction
   - VPS: see `scripts/setup-vps.sh`
 - An [Ollama Cloud](https://ollama.com) API key
 - Access to thestockie's Convex deployment

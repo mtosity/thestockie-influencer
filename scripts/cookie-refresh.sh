@@ -57,3 +57,17 @@ if [ -f "$COOKIES_FILE" ]; then
 else
   echo "   Exists: NO"
 fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NEW: Automated CDP-based cookie extraction (June 2026)
+# ═══════════════════════════════════════════════════════════════════════════
+# If you have a bridge Chrome running (via noVNC) that's logged into YouTube,
+# you can use auto-cookie-refresh.sh to extract cookies automatically via CDP:
+#
+#   ./scripts/auto-cookie-refresh.sh
+#
+# This connects to Chrome's remote debugging port (9222), pulls all YouTube
+# cookies, saves them to cookies.txt + cookies-fresh.txt + ~/.youtube-cookies.txt,
+# pushes to 1Password, and restarts the influencer service.
+#
+# notify.sh will also trigger this automatically when cookie errors are detected.

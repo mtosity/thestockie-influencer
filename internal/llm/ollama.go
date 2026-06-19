@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -42,6 +43,14 @@ type chatResp struct {
 	Error string `json:"error,omitempty"`
 }
 
+const (
+	maxAttempts           = 6
+	baseBackoff           = 2 * time.Second
+	maxBackoff            = 60 * time.Second
+	sessionLimitBackoff   = 5 * time.Minute
+	sessionLimitMarker    = "session usage limit"
+)
+
 // Chat sends a system+user turn and returns the assistant content. When format
 // is non-nil it is sent as the structured-output JSON schema.
 func (o *Ollama) Chat(ctx context.Context, system, user string, format json.RawMessage, temperature float64) (string, error) {
@@ -61,15 +70,17 @@ func (o *Ollama) Chat(ctx context.Context, system, user string, format json.RawM
 	}
 
 	// Ollama Cloud occasionally times out / resets the connection; retry
-	// transient failures with linear backoff.
-	const maxAttempts = 4
+	// transient failures with exponential backoff and jitter. If we hit the
+	// account-level session usage limit, pause for several minutes before
+	// retrying since that limit does not clear quickly.
 	var lastErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
+			delay := o.backoff(attempt, lastErr)
 			select {
 			case <-ctx.Done():
 				return "", ctx.Err()
-			case <-time.After(time.Duration(attempt-1) * 3 * time.Second):
+			case <-time.After(delay):
 			}
 		}
 		content, retryable, err := o.chatOnce(ctx, buf)
@@ -82,6 +93,22 @@ func (o *Ollama) Chat(ctx context.Context, system, user string, format json.RawM
 		}
 	}
 	return "", fmt.Errorf("ollama: %d attempts failed: %w", maxAttempts, lastErr)
+}
+
+// backoff returns an exponential-backoff-with-jitter delay. If the error looks
+// like the Ollama Cloud account session limit, use a long fixed cooldown.
+func (o *Ollama) backoff(attempt int, lastErr error) time.Duration {
+	if lastErr != nil && strings.Contains(strings.ToLower(lastErr.Error()), sessionLimitMarker) {
+		return sessionLimitBackoff
+	}
+	// 2^(attempt-2) * base, capped at maxBackoff, with full jitter.
+	factor := 1 << max(0, attempt-2)
+	d := time.Duration(factor) * baseBackoff
+	if d > maxBackoff {
+		d = maxBackoff
+	}
+	jitter := time.Duration(rand.Int63n(int64(d)))
+	return d + jitter
 }
 
 // chatOnce performs a single request. The bool reports whether the error is
@@ -102,12 +129,13 @@ func (o *Ollama) chatOnce(ctx context.Context, buf []byte) (string, bool, error)
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 
 	if resp.StatusCode != http.StatusOK {
+		bodyStr := string(body)
 		retryable := resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500
-		return "", retryable, fmt.Errorf("ollama %s: status %d: %s", o.Model, resp.StatusCode, snippet(body))
+		return "", retryable, fmt.Errorf("ollama %s: status %d: %s", o.Model, resp.StatusCode, snippet(bodyStr))
 	}
 	var cr chatResp
 	if err := json.Unmarshal(body, &cr); err != nil {
-		return "", false, fmt.Errorf("ollama decode: %w: %s", err, snippet(body))
+		return "", false, fmt.Errorf("ollama decode: %w: %s", err, snippet(string(body)))
 	}
 	if cr.Error != "" {
 		return "", false, fmt.Errorf("ollama error: %s", cr.Error)
@@ -115,8 +143,8 @@ func (o *Ollama) chatOnce(ctx context.Context, buf []byte) (string, bool, error)
 	return cr.Message.Content, false, nil
 }
 
-func snippet(b []byte) string {
-	s := strings.TrimSpace(string(b))
+func snippet(s string) string {
+	s = strings.TrimSpace(s)
 	if len(s) > 500 {
 		return s[:500]
 	}
@@ -137,5 +165,5 @@ func decodeJSON(content string, v any) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("no parseable JSON object in model response: %s", snippet([]byte(content)))
+	return fmt.Errorf("no parseable JSON object in model response: %s", snippet(content))
 }

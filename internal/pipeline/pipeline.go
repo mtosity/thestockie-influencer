@@ -237,6 +237,11 @@ func (p *Pipeline) processVideo(ctx context.Context, inf models.Influencer, cand
 		return
 	}
 
+	// Throttle LLM calls to avoid bursting through the provider's per-session
+	// request/usage limits. A short pause before each extraction gives the
+	// rate limiter room to recover between videos.
+	time.Sleep(2 * time.Second)
+
 	_ = p.cx.SetStatus(vctx, cand.VideoID, "analyzing")
 	analysis, err := p.llm.ExtractVideo(vctx, inf.Name, cand.Title, cand.PublishedAt, transcript)
 	if err != nil {

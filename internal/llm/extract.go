@@ -28,9 +28,10 @@ const extractSystem = `You are a meticulous equity research analyst. You read a 
 
 Rules:
 - Only include companies the creator actually discusses as investments. Use official, mostly US-listed ticker symbols in uppercase (e.g. NVDA, not "Nvidia"). Skip indexes/ETFs unless the creator treats them as a position.
-- For each stock: stance is bullish, bearish, or neutral from the creator's point of view; thesis is 1-3 sentences explaining WHY, in your own words but faithful to theirs; conviction reflects how strongly they express it; action is what they say they are doing or recommend.
+- For each stock: stance is bullish, bearish, or neutral from the creator's point of view; thesis is 1-2 sentences explaining WHY, in your own words but faithful to theirs; conviction reflects how strongly they express it; action is what they say they are doing or recommend.
 - Capture macro/market commentary (rates, inflation, growth, risk appetite) and any sector views or capital rotations (out of X, into Y).
 - If the video has no stock or macro content, return empty arrays and an empty macroSummary.
+- Be concise. Keep summary under 3 sentences. Keep thesis under 200 chars. Keep macroSummary under 300 chars.
 - Respond with JSON only, matching the provided schema. Never invent data.`
 
 var extractSchema = json.RawMessage(`{

@@ -62,7 +62,18 @@ func (o *Ollama) Chat(ctx context.Context, system, user string, format json.RawM
 		},
 		Stream:  false,
 		Format:  format,
-		Options: map[string]any{"temperature": temperature},
+		Options: map[string]any{
+			"temperature": temperature,
+			// Ollama defaults to a 4096-token context window, which is too
+			// small for long transcripts + structured JSON output. The model
+			// runs out of tokens mid-response and returns truncated JSON.
+			// num_ctx = total context window (prompt + response).
+			// num_predict = max tokens to generate.
+			// 32768 ctx leaves ample room for a 12K-char transcript (~3K
+			// tokens) plus a full extraction response (~2K tokens).
+			"num_ctx":     32768,
+			"num_predict": 8192,
+		},
 	}
 	buf, err := json.Marshal(reqBody)
 	if err != nil {
@@ -140,6 +151,12 @@ func (o *Ollama) chatOnce(ctx context.Context, buf []byte) (string, bool, error)
 	if cr.Error != "" {
 		return "", false, fmt.Errorf("ollama error: %s", cr.Error)
 	}
+	// Flash/reasoning models sometimes return HTTP 200 with an empty content
+	// field (the model emitted everything into its thinking channel). Treat
+	// empty responses as retryable so the retry loop gets another shot.
+	if strings.TrimSpace(cr.Message.Content) == "" {
+		return "", true, fmt.Errorf("ollama %s: empty response (model may have emitted to thinking channel)", o.Model)
+	}
 	return cr.Message.Content, false, nil
 }
 
@@ -152,18 +169,277 @@ func snippet(s string) string {
 }
 
 // decodeJSON unmarshals a model response into v, tolerating leading/trailing
-// prose by falling back to the outermost {...} span.
+// prose and markdown code fences (```json ... ```) by stripping them before
+// falling back to the outermost {...} span.
 func decodeJSON(content string, v any) error {
 	content = strings.TrimSpace(content)
+
+	// Strip markdown code fences and broken fence attempts.
+	// Models sometimes return: ```json\n{...}\n```
+	// or broken variants like: {"json\n{...}\n"}
+	// or: {```json\n{...}}
+	// Strategy: strip ``` and ```json prefixes, then strip any leading
+	// {"json or {"```json artifacts.
+	fenceReplaced := true
+	for fenceReplaced {
+		fenceReplaced = false
+		// Standard markdown fences
+		if strings.HasPrefix(content, "```") {
+			if nl := strings.IndexByte(content, '\n'); nl >= 0 {
+				content = strings.TrimSpace(content[nl+1:])
+				fenceReplaced = true
+			}
+			content = strings.TrimSuffix(content, "```")
+			content = strings.TrimSpace(content)
+			fenceReplaced = true
+		}
+		// Broken variant: {"json\n{... → strip the {"json prefix
+		if strings.HasPrefix(content, "{\"json") {
+			rest := content[6:] // skip {"json
+			// Find the next { which starts the real JSON
+			if idx := strings.IndexByte(rest, '{'); idx >= 0 {
+				content = strings.TrimSpace(rest[idx:])
+				fenceReplaced = true
+			}
+		}
+		// Broken variant: {"```json\n{ → strip
+		if strings.HasPrefix(content, "{\"```") {
+			rest := content[5:] // skip {"```
+			if idx := strings.IndexByte(rest, '{'); idx >= 0 {
+				content = strings.TrimSpace(rest[idx:])
+				fenceReplaced = true
+			}
+		}
+	}
+
+	// Some models drop the opening {" prefix and return something like:
+	//   "summary":"...",\n  "mentions":[...]
+	// or:
+	//   summary":"...",\n  "mentions":[...]
+	// Try to repair by prepending the missing brace.
+	if !strings.HasPrefix(content, "{") {
+		// Case A: starts with " (dropped {"key prefix)
+		if strings.HasPrefix(content, "\"") {
+			content = "{\"summary\":" + content
+		} else if idx := strings.Index(content, "\":"); idx > 0 && idx < 30 {
+			// Case B: starts with key: (dropped {" prefix entirely)
+			// e.g. summary":"..." → {"summary":"..."
+			key := content[:idx]
+			content = "{\"" + key + content[idx:]
+		}
+	}
+
+	// Try direct unmarshal first.
 	if err := json.Unmarshal([]byte(content), v); err == nil {
 		return nil
 	}
+	// Fallback: extract the outermost {...} span. This handles cases where
+	// the model wraps JSON in prose or has trailing/leading text.
 	start := strings.IndexByte(content, '{')
 	end := strings.LastIndexByte(content, '}')
 	if start >= 0 && end > start {
 		if err := json.Unmarshal([]byte(content[start:end+1]), v); err == nil {
 			return nil
 		}
+		// The {...} span found but malformed. Try progressively trimming
+		// trailing characters that might be fence remnants or prose.
+		sub := content[start : end+1]
+		// Sometimes the model emits multiple JSON objects or appends prose
+		// after the closing brace. Try finding each top-level object.
+		for len(sub) > 0 {
+			if err := json.Unmarshal([]byte(sub), v); err == nil {
+				return nil
+			}
+			// Trim last char and try again (handles trailing commas, prose, etc.)
+			sub = strings.TrimSpace(sub[:len(sub)-1])
+			if i := strings.LastIndexByte(sub, '}'); i >= 0 {
+				sub = sub[:i+1]
+			} else {
+				break
+			}
+		}
 	}
+
+	// Last resort: the model ran out of tokens mid-JSON (truncated response).
+	// Try to salvage partial data by closing open structures and re-parsing.
+	if recovered := recoverTruncatedJSON(content, v); recovered {
+		return nil
+	}
+
 	return fmt.Errorf("no parseable JSON object in model response: %s", snippet(content))
+}
+
+// recoverTruncatedJSON attempts to salvage usable data from a truncated JSON
+// response. When the model hits the token limit mid-string, the JSON is
+// incomplete (missing closing braces/brackets/quotes). This function:
+//  1. Finds the first { and takes everything after it
+//  2. Closes any unterminated string with a "
+//  3. Truncates at the last complete key-value pair or array element
+//  4. Closes open brackets/braces
+//  5. Attempts to unmarshal the repaired JSON
+//
+// This is a best-effort recovery — partial mentions/summary are better than
+// losing the entire extraction.
+func recoverTruncatedJSON(content string, v any) bool {
+	start := strings.IndexByte(content, '{')
+	if start < 0 {
+		return false
+	}
+	sub := content[start:]
+
+	// Count open/close braces and brackets to determine nesting depth.
+	// Track whether we're inside a string to avoid counting braces in strings.
+	inString := false
+	escape := false
+	depth := 0
+	lastCompleteIdx := -1 // index of the last } or ] at depth 1 (top-level fields)
+
+	for i, ch := range sub {
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if ch == '{' || ch == '[' {
+			depth++
+		}
+		if ch == '}' || ch == ']' {
+			depth--
+			// At depth 0 after closing, we have a complete top-level object.
+			if depth == 0 {
+				lastCompleteIdx = i
+			}
+		}
+	}
+
+	// If depth is 0, the JSON is actually complete — shouldn't happen here
+	// but handle it anyway.
+	if depth <= 0 && lastCompleteIdx >= 0 {
+		repaired := sub[:lastCompleteIdx+1]
+		if err := json.Unmarshal([]byte(repaired), v); err == nil {
+			return true
+		}
+	}
+
+	// Truncated: we need to close the open structures.
+	// Strategy: find the last complete field value or array element, truncate
+	// there, then close all open braces/brackets.
+
+	// Look for the last comma at the shallowest nesting depth that we can
+	// safely truncate at. This is a heuristic: find the last , or : that
+	// precedes a complete value.
+	bestTruncIdx := -1
+	depth = 0
+	inString = false
+	escape = false
+	for i, ch := range sub {
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if ch == '{' || ch == '[' {
+			depth++
+		}
+		if ch == '}' || ch == ']' {
+			depth--
+		}
+		// A comma at depth 1 means we just completed a top-level field.
+		// Truncating here and closing braces gives us all fields up to this point.
+		if ch == ',' && depth == 1 {
+			bestTruncIdx = i
+		}
+	}
+
+	if bestTruncIdx >= 0 {
+		// Truncate at the last complete top-level field, remove trailing comma.
+		repaired := sub[:bestTruncIdx]
+		repaired = strings.TrimRight(repaired, " 	\n\r,")
+		// Close any remaining open structures.
+		repaired += closeOpenStructures(repaired)
+		if err := json.Unmarshal([]byte(repaired), v); err == nil {
+			return true
+		}
+	}
+
+	// Even more aggressive: try closing at the current position with just
+	// string + brace closure.
+	repaired := sub
+	// Close unterminated string.
+	if inString {
+		repaired += `"`
+	}
+	// Remove trailing incomplete fragments (partial key/value after last comma).
+	if idx := strings.LastIndex(repaired, ","); idx >= 0 {
+		repaired = strings.TrimRight(repaired[:idx], " 	\n\r,")
+	}
+	repaired += closeOpenStructures(repaired)
+	if err := json.Unmarshal([]byte(repaired), v); err == nil {
+		return true
+	}
+
+	return false
+}
+
+// closeOpenStructures scans the (possibly truncated) JSON string and appends
+// the necessary closing ] and } characters for any unclosed arrays/objects.
+func closeOpenStructures(s string) string {
+	inString := false
+	escape := false
+	var stack []byte // stack of expected closers
+
+	for _, ch := range s {
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		switch ch {
+		case '{':
+			stack = append(stack, '}')
+		case '[':
+			stack = append(stack, ']')
+		case '}', ']':
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		}
+	}
+
+	// Close in reverse order (innermost first).
+	var closers strings.Builder
+	for i := len(stack) - 1; i >= 0; i-- {
+		closers.WriteByte(stack[i])
+	}
+	return closers.String()
 }

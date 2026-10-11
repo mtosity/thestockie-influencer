@@ -38,6 +38,7 @@ type Config struct {
 	// YouTube auth to beat "confirm you're not a bot" (one or the other):
 	CookiesFromBrowser string // e.g. "chrome", "safari", "firefox"
 	CookiesFile        string // path to an exported cookies.txt
+	YtDlpExtraArgs     string // additional yt-dlp CLI args (space-separated)
 
 	// Behaviour
 	WorkDir             string
@@ -143,6 +144,7 @@ func Load() *Config {
 
 		CookiesFromBrowser: getenv("YTDLP_COOKIES_FROM_BROWSER", ""),
 		CookiesFile:        getenv("YTDLP_COOKIES_FILE", ""),
+		YtDlpExtraArgs:     getenv("YTDLP_EXTRA_ARGS", ""),
 
 		WorkDir:             getenv("WORK_DIR", filepath.Join(os.TempDir(), "thestockie-influencer")),
 		WindowDays:          getenvInt("WINDOW_DAYS", 7),

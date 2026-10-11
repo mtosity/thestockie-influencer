@@ -146,6 +146,11 @@ func aggregateByCusip(hs []edgar.Holding) map[string]*agg {
 			a.shares += h.Shares
 		} else {
 			a.isOption = true
+			// For option-only positions (no plain shares entry for this CUSIP),
+			// still track shares so they don't show as 0.
+			if a.shares == 0 {
+				a.shares += h.Shares
+			}
 		}
 	}
 	return m

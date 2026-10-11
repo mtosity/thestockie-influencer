@@ -24,6 +24,14 @@
     "slug": "bill-ackman"
   },
   {
+    "name": "Bill Ackman (Pershing Square Inc.)",
+    "firm": "Pershing Square Inc.",
+    "style": "Ultra-Concentrated Activism",
+    "why": "Pershing Square Inc. now files the 13F-HR holdings; the LP entity files 13F-NT notices. Track both for completeness.",
+    "cik": "2026053",
+    "slug": "bill-ackman-psi"
+  },
+  {
     "name": "Seth Klarman",
     "firm": "The Baupost Group",
     "style": "Deep Value / Margin of Safety",
@@ -78,5 +86,69 @@
     "why": "Heavily influenced by Charlie Munger; runs a highly concentrated book focused on pristine, long-term compounders.",
     "cik": "1709323",
     "slug": "li-lu"
+  },
+  {
+    "name": "Ray Dalio",
+    "firm": "Bridgewater Associates",
+    "style": "Global Macro / Risk Parity",
+    "why": "The world's largest hedge fund; his All Weather approach reveals diversified macro positioning across asset classes.",
+    "cik": "1350694",
+    "slug": "ray-dalio"
+  },
+  {
+    "name": "Carl Icahn",
+    "firm": "Icahn Capital Management",
+    "style": "Contrarian Activism",
+    "why": "The original activist investor; notorious for proxy fights and forcing spin-offs, dividends, and board changes.",
+    "cik": "921669",
+    "slug": "carl-icahn"
+  },
+  {
+    "name": "George Soros",
+    "firm": "Soros Fund Management",
+    "style": "Global Macro / Reflexivity",
+    "why": "Quantum Fund legend who broke the Bank of England; tracks macro trends with bold, asymmetric conviction bets.",
+    "cik": "1029160",
+    "slug": "george-soros"
+  },
+  {
+    "name": "Cathie Wood",
+    "firm": "ARK Investment Management",
+    "style": "Disruptive Innovation / Thematic Growth",
+    "why": "The face of innovation investing; high-conviction bets on AI, genomics, robotics, blockchain, and energy storage.",
+    "cik": "1697748",
+    "slug": "cathie-wood"
+  },
+  {
+    "name": "Israel Englander",
+    "firm": "Millennium Management",
+    "style": "Multi-Strategy Quant",
+    "why": "One of the most prolific 13F filers by volume; massive diversified book reveals cross-sector institutional flows.",
+    "cik": "1273087",
+    "slug": "israel-englander"
+  },
+  {
+    "name": "Ken Griffin",
+    "firm": "Citadel Advisors",
+    "style": "Multi-Strategy / Market Making",
+    "why": "Citadel's massive book spans equities, derivatives, and fixed income; a barometer for institutional positioning.",
+    "cik": "1423053",
+    "slug": "ken-griffin"
+  },
+  {
+    "name": "Jim Simons",
+    "firm": "Renaissance Technologies",
+    "style": "Quantitative / Statistical Arbitrage",
+    "why": "The legendary mathematician-turned-quant; Renaissance's Medallion Fund is the gold standard of systematic trading.",
+    "cik": "1037389",
+    "slug": "jim-simons"
+  },
+  {
+    "name": "Cliff Asness",
+    "firm": "AQR Capital Management",
+    "style": "Factor Investing / Systematic Macro",
+    "why": "Pioneer of factor-based investing; AQR's book reveals institutional tilts toward value, momentum, and alternative betas.",
+    "cik": "1167557",
+    "slug": "cliff-asness"
   }
 ]

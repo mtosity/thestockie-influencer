@@ -1,11 +1,5 @@
 [
   {
-    "name": "Joseph Carlson After Hours",
-    "handle": "@JosephCarlsonAfterHours",
-    "channelId": "UCfCT7SSFEWyG4th9ZmaGYqQ",
-    "avatar": "https://yt3.googleusercontent.com/gtwDPwWWqUsdIjqCDFjKdPLhRrbsMv2hk9M1H_3ml-Lpl2M80kHWBg3TuiezWF4iLkDHpXkiTw=s900-c-k-c0x00ffffff-no-rj"
-  },
-  {
     "name": "BWB - Business With Brian",
     "handle": "@BusinessWithBrian",
     "channelId": "UCyqlbzLoYtpqDXwRI9Yh5LA",
@@ -18,12 +12,6 @@
     "avatar": "https://yt3.googleusercontent.com/7qJK7H1WOnBI1zjk1Igt4wCaVIMusKHE7xRNNqhJpH4BA3W3_qVyqNdHNOOmDvUNgHDLznmmbg=s900-c-k-c0x00ffffff-no-rj"
   },
   {
-    "name": "Andrei Jikh",
-    "handle": "@AndreiJikh",
-    "channelId": "UCGy7SkBjcIAgTiwkXEtPnYg",
-    "avatar": "https://yt3.googleusercontent.com/ytc/AIdro_ldXUfcuEwHnjU5vc9I6i-aTCPS0AuLBajd_RoNKhhHGnY=s900-c-k-c0x00ffffff-no-rj"
-  },
-  {
     "name": "Couch Investor",
     "handle": "@CouchInvestor",
     "channelId": "UCrGLm-Drgv0vbbemwwHeXJw",
@@ -34,12 +22,6 @@
     "handle": "@FinancialEducation",
     "channelId": "UCnMn36GT_H0X-w5_ckLtlgQ",
     "avatar": "https://yt3.googleusercontent.com/-WVSshxJrXObjmEVHsy-eTWgfX_oNT1iFyBDiDzgXjJXTrZFas98K9cIogV0r50ILADxiG7wSQ=s900-c-k-c0x00ffffff-no-rj"
-  },
-  {
-    "name": "Value Investing with Sven Carlin, Ph.D.",
-    "handle": "@Value-Investing",
-    "channelId": "UCrTTBSUr0zhPU56UQljag5A",
-    "avatar": "https://yt3.googleusercontent.com/ytc/AIdro_nDaQvbwxJFgm-7nauTqgu-oGpfHcGNx7EPmfgydOsO1Fo=s900-c-k-c0x00ffffff-no-rj"
   },
   {
     "name": "Chris Sain",
@@ -64,5 +46,17 @@
     "handle": "@TomNashTV",
     "channelId": "UCJwKCyEIFHwUOPQQ-4kC1Zw",
     "avatar": "https://yt3.googleusercontent.com/KTDcd_Eqqq6qiiBDkYedTh8_5ij6CTsuibtHugOQe71mZtvx5MvXeCYkQ8xiB8EG4ZqakSvNbZY=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    "name": "Ticker Symbol: YOU",
+    "handle": "@TickerSymbolYOU",
+    "channelId": "UC7kCeZ53sli_9XwuQeFxLqw",
+    "avatar": "https://yt3.googleusercontent.com/OhcMep33B2-yUFrmOLu-Ha4pCqokAge9V76nm_Aw0xEx77AbiZWP9Juu7a4taMbaGMZlvli-hhE=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    "name": "Jerry Romine Stocks",
+    "handle": "@JerryRomineStocks",
+    "channelId": "UCMiJUXvEpHHW5JTnW-ez9EA",
+    "avatar": "https://yt3.googleusercontent.com/ZsDYnQZ-OtVx_UNhV09NcRxHVTqXNy1Q-EzAnjn05KfoxPI1dzxqZ42Dp601cculva1Udfpj=s900-c-k-c0x00ffffff-no-rj"
   }
 ]

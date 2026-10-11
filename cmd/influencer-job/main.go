@@ -84,6 +84,7 @@ func main() {
 		tr := &transcribe.Transcriber{
 			YtDlp: cfg.YtDlpBin, Ffmpeg: cfg.FfmpegBin, WhisperBin: cfg.WhisperBin,
 			CookiesFromBrowser: cfg.CookiesFromBrowser, CookiesFile: cfg.CookiesFile,
+			ExtraArgs: cfg.YtDlpExtraArgs,
 			WhisperModel: cfg.WhisperModel, WhisperModelMedium: cfg.WhisperModelMedium,
 			LongVideoThreshold: cfg.LongVideoThreshold, ChunkDuration: cfg.ChunkDuration,
 			Threads: cfg.WhisperThreads, Lang: cfg.WhisperLang,
@@ -135,6 +136,7 @@ func main() {
 		Ffmpeg:             cfg.FfmpegBin,
 		CookiesFromBrowser: cfg.CookiesFromBrowser,
 		CookiesFile:        cfg.CookiesFile,
+		ExtraArgs:          cfg.YtDlpExtraArgs,
 		WhisperBin:         cfg.WhisperBin,
 		WhisperModel:       cfg.WhisperModel,
 		WhisperModelMedium: cfg.WhisperModelMedium,

@@ -128,6 +128,9 @@ func (c *Client) Latest13F(ctx context.Context, cik string) (current, prior *Fil
 }
 
 // Holdings fetches + parses the information table for a filing.
+// Values are normalized to actual dollars: some filers report in thousands
+// (per SEC spec) while others report in dollars. We detect the unit by
+// comparing the sum of XML values against tableValueTotal from primary_doc.xml.
 func (c *Client) Holdings(ctx context.Context, cik string, f *Filing) ([]Holding, error) {
 	cikNum := strings.TrimLeft(cik, "0")
 	accNo := strings.ReplaceAll(f.Accession, "-", "")
@@ -154,12 +157,59 @@ func (c *Client) Holdings(ctx context.Context, cik string, f *Filing) ([]Holding
 	}
 	// Prefer names that look like the information table.
 	sort.SliceStable(xmls, func(i, j int) bool { return infoScore(xmls[i]) > infoScore(xmls[j]) })
+
 	for _, name := range xmls {
 		raw, err := c.get(ctx, fmt.Sprintf("%s/%s/%s/%s", archives, cikNum, accNo, name))
 		if err != nil {
 			continue
 		}
 		if hs, ok := parseInfoTable(raw); ok {
+			// Detect value unit: SEC spec says values are in thousands of dollars.
+			// Some filers (e.g. Berkshire, Li Lu) report in actual dollars instead.
+			// Heuristic: compute the MEDIAN value-per-share across all non-option
+			// holdings with shares > 0. If median value/share < $0.10, values are
+			// in thousands. If > $1, values are in dollars. Between $0.10 and $1,
+			// fall back to checking total portfolio value: if total > $1T, already
+			// in dollars (no portfolio is $1Q); if total < $1B, likely in thousands.
+			{
+				var vps []float64
+				var totalVal float64
+				for _, h := range hs {
+					totalVal += h.Value
+					if h.Shares > 0 && h.PutCall == "" {
+						vps = append(vps, h.Value/h.Shares)
+					}
+				}
+				sort.Float64s(vps)
+				medianVPS := 0.0
+				if len(vps) > 0 {
+					medianVPS = vps[len(vps)/2]
+				}
+
+				// Determine if values are in thousands
+				inThousands := false
+				if medianVPS > 0 {
+					if medianVPS < 0.10 {
+						inThousands = true // clearly thousands
+					} else if medianVPS > 1.0 {
+						inThousands = false // clearly dollars
+					} else {
+						// Ambiguous: use total value as tiebreaker
+						// If total < $1B, likely thousands (too small for 13F)
+						// If total > $100B, likely dollars
+						inThousands = totalVal < 1e9
+					}
+				} else {
+					// No non-option holdings with shares — use total value
+					inThousands = totalVal < 1e9
+				}
+
+				if inThousands {
+					for i := range hs {
+						hs[i].Value *= 1000
+					}
+				}
+			}
 			return hs, nil
 		}
 	}

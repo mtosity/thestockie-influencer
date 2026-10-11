@@ -22,6 +22,7 @@ type Transcriber struct {
 	Ffmpeg             string // optional; passed as --ffmpeg-location
 	CookiesFromBrowser string // e.g. "chrome"; beats YouTube bot checks
 	CookiesFile        string // path to exported cookies.txt
+	ExtraArgs          string // additional yt-dlp args (space-separated)
 	WhisperBin         string
 	WhisperModel       string // default model (large-v3-turbo)
 	WhisperModelMedium string // fallback for long videos (>15min)
@@ -75,6 +76,10 @@ func (t *Transcriber) Transcribe(ctx context.Context, videoID, videoURL string) 
 		ytArgs = append(ytArgs, "--cookies-from-browser", t.CookiesFromBrowser)
 	} else if t.CookiesFile != "" {
 		ytArgs = append(ytArgs, "--cookies", t.CookiesFile)
+	}
+	// Extra yt-dlp args from env (e.g. extractor-args for player_client).
+	if t.ExtraArgs != "" {
+		ytArgs = append(ytArgs, strings.Fields(t.ExtraArgs)...)
 	}
 	ytArgs = append(ytArgs, videoURL)
 	// YouTube intermittently bot-challenges even authenticated requests under

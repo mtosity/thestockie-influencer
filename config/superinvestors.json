@@ -19,17 +19,9 @@
     "name": "Bill Ackman",
     "firm": "Pershing Square",
     "style": "Ultra-Concentrated Activism",
-    "why": "Typically holds fewer than 10 large-cap names; excellent for analyzing deep corporate operational plays.",
-    "cik": "1336528",
-    "slug": "bill-ackman"
-  },
-  {
-    "name": "Bill Ackman (Pershing Square Inc.)",
-    "firm": "Pershing Square Inc.",
-    "style": "Ultra-Concentrated Activism",
-    "why": "Pershing Square Inc. now files the 13F-HR holdings; the LP entity files 13F-NT notices. Track both for completeness.",
+    "why": "Typically holds fewer than 10 large-cap names; excellent for analyzing deep corporate operational plays. Holdings are filed by Pershing Square Inc. (CIK 2026053) since Q2 2026.",
     "cik": "2026053",
-    "slug": "bill-ackman-psi"
+    "slug": "bill-ackman"
   },
   {
     "name": "Seth Klarman",

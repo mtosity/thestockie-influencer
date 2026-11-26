@@ -88,6 +88,10 @@ func (s *Service) Run(ctx context.Context, opts Options) error {
 		}
 
 		positions, totalValue := diff(curH, priorH)
+		if n := len(positions); n > maxPositions {
+			positions = largest(positions, maxPositions)
+			s.Log.Info("capped positions", "investor", inv.Name, "kept", maxPositions, "of", n)
+		}
 		s.resolveTickers(ctx, positions, opts.DryRun)
 
 		if opts.DryRun {
@@ -215,6 +219,19 @@ func diff(cur, prior []edgar.Holding) ([]models.Position, float64) {
 		})
 	}
 	return positions, total
+}
+
+// maxPositions caps what one filing stores. Quant funds (Citadel, Millennium)
+// file 8000+ rows, which exceeds Convex's per-mutation array limit; the long
+// tail of tiny positions doesn't change any view. Percentages still use the
+// full portfolio total.
+const maxPositions = 4000
+
+// largest keeps the n positions with the biggest value (current value, or
+// prior value for exits).
+func largest(positions []models.Position, n int) []models.Position {
+	sort.SliceStable(positions, func(i, j int) bool { return positions[i].Value > positions[j].Value })
+	return positions[:n]
 }
 
 // ── Ticker resolution (Convex cache → OpenFIGI) ──────────────────────────────

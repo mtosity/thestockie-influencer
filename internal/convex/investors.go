@@ -49,13 +49,23 @@ type CusipCacheEntry struct {
 	Name   *string `json:"name"`
 }
 
+// cusipBatch keeps each cusip call under Convex's per-function limits
+// (4096 reads, 1024 returned object fields, 8192 array items).
+const cusipBatch = 500
+
 func (c *Client) CusipLookup(ctx context.Context, cusips []string) (map[string]CusipCacheEntry, error) {
 	out := map[string]CusipCacheEntry{}
-	if len(cusips) == 0 {
-		return out, nil
+	for start := 0; start < len(cusips); start += cusipBatch {
+		end := min(start+cusipBatch, len(cusips))
+		part := map[string]CusipCacheEntry{}
+		if err := c.do(ctx, http.MethodPost, "/investor/cusip/lookup", map[string][]string{"cusips": cusips[start:end]}, &part); err != nil {
+			return out, err
+		}
+		for k, v := range part {
+			out[k] = v
+		}
 	}
-	err := c.do(ctx, http.MethodPost, "/investor/cusip/lookup", map[string][]string{"cusips": cusips}, &out)
-	return out, err
+	return out, nil
 }
 
 type CusipEntry struct {
@@ -65,10 +75,13 @@ type CusipEntry struct {
 }
 
 func (c *Client) CusipSave(ctx context.Context, entries []CusipEntry) error {
-	if len(entries) == 0 {
-		return nil
+	for start := 0; start < len(entries); start += cusipBatch {
+		end := min(start+cusipBatch, len(entries))
+		if err := c.do(ctx, http.MethodPost, "/investor/cusip/save", map[string]any{"entries": entries[start:end]}, nil); err != nil {
+			return err
+		}
 	}
-	return c.do(ctx, http.MethodPost, "/investor/cusip/save", map[string]any{"entries": entries}, nil)
+	return nil
 }
 
 type SaveFilingReq struct {

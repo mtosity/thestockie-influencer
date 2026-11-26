@@ -289,6 +289,13 @@ func (p *Pipeline) aggregateAndDigest(ctx context.Context, opts Options, influen
 		p.log.Info("no data to synthesize; skipping digest")
 		return nil
 	}
+	// The digest describes the whole roster, not just this run's scan list
+	// (empty for --aggregate-only, partial for --influencer).
+	if active, err := p.cx.ListActive(ctx); err == nil {
+		influencersCount = len(active)
+	} else {
+		p.log.Warn("count active influencers failed; using scan count", "err", err)
+	}
 	return p.cx.SaveDigest(ctx, convex.SaveDigestReq{
 		Date:               date,
 		MarketSentiment:    digest.MarketSentiment,

@@ -112,6 +112,7 @@ The unit is `Type=oneshot`, runs as the `thestockie` user, sets a full `PATH`
 | `YTDLP_BIN` | `yt-dlp` | keep current (`yt-dlp -U`) |
 | `YTDLP_COOKIES_FILE` | — | exported `cookies.txt` |
 | `YTDLP_COOKIES_FROM_BROWSER` | — | alternative to the file |
+| `TRANSCRIPT_SOURCE` | `captions` | `captions`: YouTube caption track first (manual English, else `*-orig` ASR; never the translated auto `en`), whisper fallback · `whisper`: always whisper |
 | `WINDOW_DAYS` | `60` | sentiment aggregation window |
 | `RETENTION_DAYS` | `60` | purge data older than this |
 | `MAX_VIDEO_AGE_DAYS` | `62` | discovery cutoff |

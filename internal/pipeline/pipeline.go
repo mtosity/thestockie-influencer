@@ -179,6 +179,9 @@ func (p *Pipeline) processInfluencer(ctx context.Context, inf models.Influencer,
 	}
 	var fresh []models.VideoCandidate
 	for _, c := range cands {
+		if c.IsShort { // never analyze Shorts: too short for a real thesis, and they flood the feed
+			continue
+		}
 		if c.PublishedAt >= cutoff {
 			fresh = append(fresh, c)
 		}
@@ -348,14 +351,24 @@ func shouldProcess(status string) bool {
 	return status != "done" && status != "skipped"
 }
 
-func filterInfluencers(in []models.Influencer, needle string) []models.Influencer {
-	needle = strings.ToLower(needle)
+// filterInfluencers keeps influencers whose channelId/handle/name contains any
+// of the comma-separated needles (case-insensitive).
+func filterInfluencers(in []models.Influencer, needles string) []models.Influencer {
+	var list []string
+	for _, n := range strings.Split(needles, ",") {
+		if n = strings.ToLower(strings.TrimSpace(n)); n != "" {
+			list = append(list, n)
+		}
+	}
 	var out []models.Influencer
 	for _, inf := range in {
-		if strings.Contains(strings.ToLower(inf.ChannelID), needle) ||
-			strings.Contains(strings.ToLower(inf.Handle), needle) ||
-			strings.Contains(strings.ToLower(inf.Name), needle) {
-			out = append(out, inf)
+		for _, needle := range list {
+			if strings.Contains(strings.ToLower(inf.ChannelID), needle) ||
+				strings.Contains(strings.ToLower(inf.Handle), needle) ||
+				strings.Contains(strings.ToLower(inf.Name), needle) {
+				out = append(out, inf)
+				break
+			}
 		}
 	}
 	return out

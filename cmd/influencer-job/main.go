@@ -30,7 +30,7 @@ func main() {
 	var (
 		envPath         = flag.String("env", ".env", "path to .env file (optional)")
 		modeFlag        = flag.String("mode", "manual", "run mode label: daily|manual")
-		only            = flag.String("influencer", "", "only this influencer (matches channelId/handle/name)")
+		only            = flag.String("influencer", "", "only these influencers: comma-separated, each matching channelId/handle/name")
 		influencersFile = flag.String("influencers", "", "override path to influencers JSON")
 		aggregateOnly   = flag.Bool("aggregate-only", false, "skip discovery; only recompute aggregate + digest")
 		dryRun          = flag.Bool("dry-run", false, "discover + log only; no transcription, no writes")
@@ -89,6 +89,7 @@ func main() {
 			LongVideoThreshold: cfg.LongVideoThreshold, ChunkDuration: cfg.ChunkDuration,
 			Threads: cfg.WhisperThreads, Lang: cfg.WhisperLang,
 			WorkDir: cfg.WorkDir, KeepAudio: cfg.KeepAudio, Log: log,
+			PreferCaptions: cfg.TranscriptSource != "whisper",
 		}
 		p := pipeline.New(cfg, nil, tr, llm.New(ollama, 0, log), &http.Client{Timeout: 30 * time.Second}, log)
 		log.Info("probe mode", "model", cfg.OllamaModel, "whisperModel", filepath.Base(cfg.WhisperModel), "noLLM", *noLLM)
@@ -146,6 +147,7 @@ func main() {
 		Lang:               cfg.WhisperLang,
 		WorkDir:            cfg.WorkDir,
 		KeepAudio:          cfg.KeepAudio,
+		PreferCaptions:     cfg.TranscriptSource != "whisper",
 		Log:                log,
 	}
 	discover := &http.Client{Timeout: 30 * time.Second}

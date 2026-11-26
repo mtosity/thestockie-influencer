@@ -1,4 +1,6 @@
-// Package transcribe turns a YouTube video into text: yt-dlp pulls the audio,
+// Package transcribe turns a YouTube video into text. With PreferCaptions it
+// first uses YouTube's own caption track (seconds, no audio); otherwise, or when
+// no usable track exists yet, yt-dlp pulls the audio,
 // ffmpeg (via yt-dlp) downsamples to 16 kHz mono, and whisper.cpp transcribes.
 // For long videos, audio is physically split into chunks with ffmpeg to avoid
 // whisper.cpp loading the entire file into RAM.
@@ -32,6 +34,7 @@ type Transcriber struct {
 	Lang               string
 	WorkDir            string
 	KeepAudio          bool
+	PreferCaptions     bool // try YouTube's caption track before whisper
 	Log                *slog.Logger
 }
 
@@ -59,6 +62,16 @@ func (t *Transcriber) Transcribe(ctx context.Context, videoID, videoURL string) 
 	// Rate-limit: pause briefly before each download to avoid triggering
 	// YouTube's bot detection on shared/cloud IPs.
 	time.Sleep(2 * time.Second)
+
+	// 0) YouTube's own transcript, when there is a trustworthy track.
+	if t.PreferCaptions {
+		text, track, err := t.Captions(ctx, videoID, videoURL)
+		if err == nil {
+			t.Log.Info("transcript from captions", "videoId", videoID, "track", track, "chars", len(text))
+			return text, nil
+		}
+		t.Log.Info("captions unavailable; using whisper", "videoId", videoID, "reason", err)
+	}
 
 	// 1) Download bestaudio and let yt-dlp's ffmpeg emit 16 kHz mono PCM wav.
 	ytArgs := []string{

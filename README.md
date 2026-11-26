@@ -45,7 +45,7 @@ internal/
   config/                env + .env loading, influencer JSON
   models/                shared types + LLM-output sanitation
   youtube/               RSS discovery + @handle → channelId resolution
-  transcribe/            yt-dlp → ffmpeg (16k mono) → whisper.cpp
+  transcribe/            YouTube captions, else yt-dlp → ffmpeg (16k mono) → whisper.cpp
   llm/                   Ollama Cloud client, per-video extract, daily synthesis
   convex/                HTTP client for the Convex endpoints
   pipeline/              orchestration

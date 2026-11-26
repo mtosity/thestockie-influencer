@@ -26,6 +26,7 @@ type VideoCandidate struct {
 	Title       string
 	URL         string
 	PublishedAt int64 // unix ms
+	IsShort     bool  // a YouTube Short (known from the RSS feed; the yt-dlp /videos fallback never lists Shorts)
 }
 
 // Mention is one influencer's stance on one ticker within a video.

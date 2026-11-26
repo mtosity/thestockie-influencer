@@ -39,6 +39,7 @@ type Config struct {
 	CookiesFromBrowser string // e.g. "chrome", "safari", "firefox"
 	CookiesFile        string // path to an exported cookies.txt
 	YtDlpExtraArgs     string // additional yt-dlp CLI args (space-separated)
+	TranscriptSource   string // "captions" (YouTube captions, whisper fallback) | "whisper"
 
 	// Behaviour
 	WorkDir             string
@@ -145,6 +146,7 @@ func Load() *Config {
 		CookiesFromBrowser: getenv("YTDLP_COOKIES_FROM_BROWSER", ""),
 		CookiesFile:        getenv("YTDLP_COOKIES_FILE", ""),
 		YtDlpExtraArgs:     getenv("YTDLP_EXTRA_ARGS", ""),
+		TranscriptSource:   getenv("TRANSCRIPT_SOURCE", "captions"),
 
 		WorkDir:             getenv("WORK_DIR", filepath.Join(os.TempDir(), "thestockie-influencer")),
 		WindowDays:          getenvInt("WINDOW_DAYS", 7),

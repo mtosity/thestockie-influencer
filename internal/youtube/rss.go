@@ -79,6 +79,9 @@ type atomFeed struct {
 		VideoID   string `xml:"videoId"`
 		Title     string `xml:"title"`
 		Published string `xml:"published"`
+		Link      struct {
+			Href string `xml:"href,attr"`
+		} `xml:"link"`
 	} `xml:"entry"`
 }
 
@@ -156,6 +159,8 @@ func discoverRSS(ctx context.Context, hc *http.Client, channelID string) ([]mode
 			Title:       strings.TrimSpace(e.Title),
 			URL:         "https://www.youtube.com/watch?v=" + e.VideoID,
 			PublishedAt: publishedMs,
+			// The feed links Shorts as /shorts/<id> and regular uploads as /watch?v=.
+			IsShort: strings.Contains(e.Link.Href, "/shorts/"),
 		})
 	}
 	return out, nil
